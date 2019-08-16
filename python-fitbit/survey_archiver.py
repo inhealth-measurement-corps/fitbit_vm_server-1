@@ -21,8 +21,8 @@ to_zone = tz.gettz('America/New_York')
 # ICTR database info
 server = u'jhbcru-vsql2\jhbcru_vsql2'
 database = u'mmcfitbit'
-user = u'WIN\gzhanyu1'
-password = u'Gzy960218$'
+user = u'WIN\USERNAME' # YOUR USERNAME
+password = u'PASSWORD' # YOUR PASSWORD
 
 get_checkin_url = "https://jhprohealth.herokuapp.com/polls/get_checkins_yesterday/"
 get_survey_url = "https://jhprohealth.herokuapp.com/polls/get_surveys_yesterday/"
