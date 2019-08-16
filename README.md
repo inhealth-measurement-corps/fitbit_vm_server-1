@@ -21,14 +21,18 @@ CTRL-C to close auth server.
 ```
 pip install -r requirements2.txt
 ```
-Modify the code [dbtester.py](python-fitbit/dbtester.py)
+Modify the code [dbtester.py](python-fitbit/dbtester.py) and [survey_archiver.py](python-fitbit/survey_archiver.py) with your own credentials to ICTR server.
 ```
 python dbtester.py [CODE]
 ```
-Now the token is saved on tokens.json, save {user_id} in your head.
+Now the token is saved on [tokens.json](python-fitbit/tokens.json), save {user_id} in your head.
 ```
 python dbtester.py
 ```
+
+Now the user with active token in [tokens.json](python-fitbit/tokens.json) have been updated. 
+
+Check the ICTR database for changes.
 
 ### Installing
 
