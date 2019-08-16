@@ -96,8 +96,8 @@ Clone the web server [here](https://github.com/fath0218/Fitbit_Webserver_Django)
 
 Get into the directory and log into heroku with this credential:
 
-*ID: anthonysunghoonkim@gmail.com
-*PW: Fitbit123
+* anthonysunghoonkim@gmail.com
+* Fitbit123
 
 ```
 cd Fitbit_Webserver_Django
