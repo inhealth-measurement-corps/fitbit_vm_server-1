@@ -36,11 +36,11 @@ python starter.py
 
 Modify the code [dbtester.py](python-fitbit/dbtester.py) and [survey_archiver.py](python-fitbit/survey_archiver.py) with your own credentials to ICTR server.
 ```
-python dbtester.py [CODE]
+python prostate_cancer_puller.py [CODE]
 ```
 Now the token is saved on [tokens.json](python-fitbit/tokens.json), save {user_id} in your head.
 ```
-python dbtester.py
+python prostate_cancer_puller.py
 ```
 
 Now the user with active token in [tokens.json](python-fitbit/tokens.json) have been updated. 
@@ -52,18 +52,18 @@ Check the ICTR database for changes.
 Autorun every active user in [tokens.json](python-fitbit/tokens.json):
 
 ```
-python dbtester.py
+python prostate_cancer_puller.py
 ```
 
 Register new user or update existing user's token: (get code by running gather_keys_oauth2.py)
 
 ```
-python dbtester.py [code]
+python prostate_cancer_puller.py [code]
 ```
 
 Update a certain user's date in a given period:
 ```
-python dbtester.py get [fitbit_uid] [start date, like 2019-08-01] [end date, like 2019-08-05]
+python prostate_cancer_puller.py get [fitbit_uid] [start date, like 2019-08-01] [end date, like 2019-08-05]
 ```
 
 ### Check-in and survey data puller
@@ -71,13 +71,13 @@ python dbtester.py get [fitbit_uid] [start date, like 2019-08-01] [end date, lik
 Update yesterday's data:
 
 ```
-python survey_archiver.py
+python survey_archiver_ictr.py
 ```
 
 Update date from a custom date:
 
 ```
-pyhton survey_archiver.py [date]
+pyhton survey_archiver_ictr.py [date]
 ```
 
 ## Developer Guide
@@ -107,7 +107,7 @@ Link the heroku app with this git directory:
 ```
 heroku git:remote -a jhprohealth
 ```
-After modification:
+After modification, push to github and deploy on heroku:
 ```
 git add .
 git commit -m ""
