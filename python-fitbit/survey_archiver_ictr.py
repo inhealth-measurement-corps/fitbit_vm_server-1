@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import json
 import datetime
-import MySQLdb as db
+import pymssql
+from datetime import datetime as imported_datetime
 
 import json
 import fitbit
@@ -16,15 +17,18 @@ from dateutil import tz
 EST_TZ = pytz.timezone("US/Eastern")
 from_zone = tz.gettz('UTC')
 to_zone = tz.gettz('America/New_York')
-#Remote database info
-HOST = "10.162.80.9"
-PORT = 3306
-USER = "fitbitter"
-PASSWORD = "yiGLeVihDHhQMJPo"
-DB = "mmcfitbit"
+
+# ICTR database info
+server = u'jhbcru-vsql2\jhbcru_vsql2'
+database = u'mmcfitbit'
+user = u'WIN\USERNAME' # YOUR USERNAME
+password = u'PASSWORD' # YOUR PASSWORD
 
 get_checkin_url = "https://jhprohealth.herokuapp.com/polls/get_checkins_yesterday/"
 get_survey_url = "https://jhprohealth.herokuapp.com/polls/get_surveys_yesterday/"
+
+get_custom_checkin_url = "https://jhprohealth.herokuapp.com/polls/get_checkins_custom_day/"
+get_custom_survey_url = "https://jhprohealth.herokuapp.com/polls/get_surveys_custom_day/"
 
 now = str(datetime.datetime.now())
 
@@ -54,8 +58,15 @@ def main():
     insert_checkins(checkin_set)
 
 def pull_yesterday_checkin():
-    print("Retrieving surveys from yesterday...")
-    r = requests.get(get_checkin_url)
+    if (len(sys.argv) == 2):
+        print("Retrieving checkins from %s ..." % sys.argv[1])
+        r = requests.get(get_custom_checkin_url + sys.argv[1])
+    elif (len(sys.argv) == 1):
+        print("Retrieving checkins from yesterday...")
+        r = requests.get(get_checkin_url)
+    else:
+        print("Needs one or no argument")
+        sys.exit()
     print(r.text)
 
     checkin_json = json.loads(r.text)
@@ -69,13 +80,13 @@ def pull_yesterday_checkin():
         utc = utc.replace(tzinfo=from_zone)
         # Convert time zone
         est = utc.astimezone(to_zone).strftime("%Y-%m-%d %H:%M:%S")
-        print est
+        print (est)
 
         checkin_list.append(CheckinData(uid=checkin["userid"], time=est, checkin_type=checkin["ping_type"]))
 
     # print(uid)
     print(checkin_list)
-    print("\t...Done getting yesterday's checkins")
+    print("\t...Done getting checkins")
 
     return checkin_list
 
@@ -87,8 +98,12 @@ def insert_checkins(checkin_list):
 
 
     try:
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB)
+        connection = pymssql.connect(server, user, password, database)
+		
+        dbhandler = connection.cursor()
+        flush_date_start = insert_set[0][1][:10]
+        flush_stmt = "DELETE FROM PC_Checkin WHERE checked_in >= '%s'" % (flush_date_start)
+        dbhandler.execute(flush_stmt)
 
         dbhandler = connection.cursor()
         stmt = "INSERT INTO PC_Checkin (user_id, checked_in, type, added_on) \
@@ -97,15 +112,22 @@ def insert_checkins(checkin_list):
 
 
     except Exception as e:
-        print "EXCEPTION IN insert_checkins: " + str(e)
+        print ("EXCEPTION IN insert_checkins: " + str(e))
 
     finally:
         connection.commit()
         connection.close()
 
 def pull_yesterday_survey():
-    print("Retrieving surveys from yesterday...")
-    r = requests.get(get_survey_url)
+    if (len(sys.argv) == 2):
+        print("Retrieving surveys from %s ..." % sys.argv[1])
+        r = requests.get(get_custom_survey_url + sys.argv[1])
+    elif (len(sys.argv) == 1):
+        print("Retrieving surveys from yesterday...")
+        r = requests.get(get_survey_url)
+    else:
+        print("Needs one or no argument")
+        sys.exit()
     print(r.text)
 
     survey_json = json.loads(r.text)
@@ -132,7 +154,7 @@ def pull_yesterday_survey():
 
     # print(uid)
     print(survey_list)
-    print("\t...Done getting yesterday's surveys")
+    print("\t...Done getting surveys")
 
     return survey_list
 
@@ -194,8 +216,12 @@ def insert_surveys(survey_set):
     try:
         print("Inserting surveys into DB...")
         print(insert_set)
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB)
+        connection = pymssql.connect(server, user, password, database)
+		
+        dbhandler = connection.cursor()
+        flush_date_start = insert_set[0][1][:10]
+        flush_stmt = "DELETE FROM PC_Surveys_QoL WHERE submitted_at >= '%s'" % (flush_date_start)
+        dbhandler.execute(flush_stmt)
 
         dbhandler = connection.cursor()
         stmt = "INSERT INTO PC_Surveys_QoL (user_id, submitted_at, added_on, \
@@ -213,7 +239,7 @@ def insert_surveys(survey_set):
         dbhandler.executemany(stmt, insert_set)
 
     except Exception as e:
-        print "EXCEPTION IN insert_surveys: " + str(e)
+        print ("EXCEPTION IN insert_surveys: " + str(e))
 
     finally:
         connection.commit()
@@ -221,8 +247,7 @@ def insert_surveys(survey_set):
 
 def query_test_surveys():
     try:
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB)
+        onnection = pymssql.connect(server, user, password, database)
 
         cursor = connection.cursor(db.cursors.DictCursor)
         result = cursor.execute("SELECT * FROM PC_Surveys_QoL WHERE user_id = 74477")
@@ -250,3 +275,6 @@ print("==========================================")
 
 # pull_yesterday_checkin()
 # query_test_surveys()
+
+
+

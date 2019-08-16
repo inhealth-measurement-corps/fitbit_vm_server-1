@@ -13,16 +13,15 @@
 ############################################################
 
 import json
-import datetime
-import MySQLdb as db
-import MySQLdb.cursors as cursors
-
-import json
 import fitbit
 import requests
 import base64
 import sys
 import traceback
+
+import pymssql
+from datetime import datetime as imported_datetime
+import datetime
 
 start_from_days_ago = 7
 end_on_days_ago = 2
@@ -85,17 +84,17 @@ class DeviceInfo:
 # These are the secrets etc from Fitbit developer
 OAuthTwoClientID = "22CMWS"
 ClientOrConsumerSecret = "83418e86bc034c4f162277e411144aaa"
-base64_key_secret = base64.b64encode(OAuthTwoClientID + ":" + ClientOrConsumerSecret)
+base64_key_secret_string = OAuthTwoClientID + ":" + ClientOrConsumerSecret
+base64_key_secret = base64.urlsafe_b64encode(base64_key_secret_string.encode('UTF-8')).decode('ascii')
 
 # This is the Fitbit URL
 TokenURL = "https://api.fitbit.com/oauth2/token"
 
-# Remote database info
-HOST = "10.162.80.9"
-PORT = 3306
-USER = "fitbitter"
-PASSWORD = "yiGLeVihDHhQMJPo"
-DB = "mmcfitbit"
+# ICTR database info
+server = u'jhbcru-vsql2\jhbcru_vsql2'
+database = u'mmcfitbit'
+user = u'WIN\USERNAME' # YOUR USERNAME
+password = u'PASSWORD' # YOUR PASSWORD
 
 now = str(datetime.datetime.now())
 file_name = "/Users/anthony/Desktop/python_api_puller/python-fitbit/token.json"
@@ -241,7 +240,7 @@ def is_token_fresh_introspect(token_dict, uid):
     print("Introspect for " + uid + ":\n" + r.text)
     introspect_json = json.loads(r.text)
     if "active" in introspect_json:
-        print introspect_json["active"]
+        print (introspect_json["active"])
         return introspect_json["active"]
     else:
         return False
@@ -250,7 +249,7 @@ def is_token_fresh_introspect(token_dict, uid):
     # else:
     #     return True
 
-def refresh_multi_user_token(token_dict):
+def refresh_multi_user_token(token_dict, query_uid="", q_start_date="", q_end_date=""):
     json_user_datas = token_dict
     for user in json_user_datas["users"]:
         uid = json_user_datas["users"][user]["user_id"]
@@ -258,7 +257,14 @@ def refresh_multi_user_token(token_dict):
 
         # is_token_fresh_introspect(token_dict, uid)
         # continue
-
+        
+        if (query_uid != ""):
+            if (query_uid == uid and is_token_fresh_introspect):
+                data_retrieval_routine(json_user_datas, user, q_start_date=q_start_date, q_end_date=q_end_date)
+                break
+            else:
+                continue
+            
         if is_token_fresh_introspect(token_dict, uid):
             data_retrieval_routine(json_user_datas, user)
             pass
@@ -289,7 +295,11 @@ def refresh_multi_user_token(token_dict):
                 json_user_datas["users"][user]["access_token"] = response["access_token"]
                 json_user_datas["users"][user]["refresh_token"] = response["refresh_token"]
                 json_user_datas["users"][user]["modified_at"] = str(datetime.datetime.now())
-                data_retrieval_routine(json_user_datas, user)
+                # data_retrieval_routine(json_user_datas, user)
+                if query_uid == "" or query_uid == uid:
+                    data_retrieval_routine(json_user_datas, user, q_start_date=q_start_date, q_end_date=q_end_date)
+                else:
+                    continue
 
     write_file = open("tokens.json", 'w+')
     json.dump(json_user_datas, write_file, indent=4)
@@ -299,7 +309,7 @@ def refresh_multi_user_token(token_dict):
     return json_user_datas
 
 
-def data_retrieval_routine(token_dict, uid):
+def data_retrieval_routine(token_dict, uid, q_start_date="", q_end_date=""):
     yesterday = datetime.datetime.now() - datetime.timedelta(days = 1)
 
     date_string = str(yesterday.date())
@@ -314,14 +324,20 @@ def data_retrieval_routine(token_dict, uid):
             update_devices(device_dict)
             execute_heart_and_step(token_dict, uid, date_string, device_dict)
             execute_weight(token_dict, uid, date_string)
-            # execute_user_info(token_dict, uid)
+            execute_user_info(token_dict, uid)
         except ValueError as vale:
-            print vale
+            print (vale)
 
         # query_start_date = last_logged_date + datetime.timedelta(days=1)
         # force rewrite last week's data
-        query_start_date = datetime.date.today() - datetime.timedelta(start_from_days_ago)
-        query_end_date = datetime.date.today() - datetime.timedelta(end_on_days_ago)
+        if q_start_date == "" and q_end_date == "":
+            query_start_date = datetime.date.today() - datetime.timedelta(start_from_days_ago)
+            query_end_date = datetime.date.today() - datetime.timedelta(end_on_days_ago)
+        else:
+            query_start_date = datetime.datetime.strptime(q_start_date, '%Y-%m-%d').date()
+            query_end_date = datetime.datetime.strptime(q_end_date, '%Y-%m-%d').date()
+            
+        print("query start date: " + str(query_start_date))
 
         if query_start_date < datetime.date.today():
             print("Retroactively fetching data for %s from %s to %s"
@@ -331,9 +347,9 @@ def data_retrieval_routine(token_dict, uid):
         #     print("Already retrieved yesterday's data.")
 
     except ValueError as ve:
-        print ve
+        print (ve)
 
-    print "\t-------data as of yesterday that is: " + str(yesterday.date()) + "-------"
+    print ("\t-------data as of yesterday that is: " + str(yesterday.date()) + "-------")
 
 
 def loop_retroactive_data(token_dict, uid, query_start_date, query_end_date):
@@ -355,10 +371,14 @@ def execute_user_info(token_dict, uid):
 
 def insert_user_info(user_json):
     insert_set = []
-
+    print ("Updating User table...")
+    print (user_json)
     try:
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB)
+        server = u'jhbcru-vsql2\jhbcru_vsql2'
+        database = u'mmcfitbit'
+        user = u'WIN\gzhanyu1'
+        password = u'Gzy960218$'
+        connection = pymssql.connect(server, user, password, database)
 
         user = user_json["user"]
         dbhandler = connection.cursor()
@@ -366,7 +386,7 @@ def insert_user_info(user_json):
         dbhandler.execute(stmt)
 
     except Exception as e:
-        print "EXCEPTION IN insert_user_info: " + str(e)
+        print ("EXCEPTION IN insert_user_info: " + str(e))
         print(dbhandler._last_executed)
 
     finally:
@@ -392,7 +412,7 @@ def execute_heart_and_step(token_dict, uid, date_string, device_dict):
         insert_intraday_dict(time_dict)
 
     except ValueError as ve:
-        print ve
+        print (ve)
 
 
 def retroactive_execute_heart_and_step(token_dict, uid, date_string):
@@ -416,7 +436,7 @@ def retroactive_execute_heart_and_step(token_dict, uid, date_string):
         insert_intraday_dict(time_dict)
 
     except ValueError as ve:
-        print ve
+        print (ve)
 
 
 
@@ -435,14 +455,19 @@ def multi_login_routine():
         print("Populating data by refreshing previous token sessions.")
         token_dict = get_multi_token_dict()
         refresh_multi_user_token(token_dict)
-    elif(len(sys.argv) == 3):
-        if(sys.argv[1] == "loop"):
-            # token_dict = get_multi_token_dict()
-            # for i in range(0, sys.argv[2]):
-            exit()
+    elif sys.argv[1] == "get":
+        if len(sys.argv) == 3:
+            print("Populating data by refreshing specified token: %s" % sys.argv[2])
+            token_dict = get_multi_token_dict()
+            refresh_multi_user_token(token_dict=token_dict, query_uid=sys.argv[2])
+        elif len(sys.argv) == 5:
+            print("Populating data by refreshing specified token: %s" % sys.argv[2])
+            print("start and end date %s ~ %s" % (sys.argv[3], sys.argv[4]))
+            token_dict = get_multi_token_dict()
+            refresh_multi_user_token(token_dict=token_dict, query_uid=sys.argv[2], q_start_date=sys.argv[3], q_end_date=sys.argv[4])
 
     else:
-        print("Needs one or no argument")
+        print("Invalid input. Usage:\nRun python dbtester.py to refresh all users;\n Run python dbtester.py [code] to register a new user or update access token;\n Run python dbtester.py get [fitbit_uid] [date] [date] to pull a certain user's data during the given dates.")
         sys.exit()
     # token_dict = token_refresh(token_dict)
     return token_dict
@@ -604,7 +629,7 @@ def combine_activity_levels(sedentary_payload, light_active_payload, fairly_acti
 
 
 def make_intraday_dict_from_json_datas(heart_rate_json, step_count_json, distance_json, activity_level_dict, device_dict, uid):
-    print "making intraday hr/step dict from user: %s" % uid
+    print ("making intraday hr/step dict from user: %s" % uid)
     def has_synced_yesterday(device_info_dict):
         print("HAS SYNCED RECENTLY?: " + str(device_info_dict.values()))
         for device_info in device_info_dict.values():
@@ -876,10 +901,9 @@ def make_device_dict_from_json(devices_payload, uid):
 
 def update_devices(device_id_pair):
     try:
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB)
+        connection = pymssql.connect(server, user, password, database)
 
-        cursor = connection.cursor(db.cursors.DictCursor)
+        cursor = connection.cursor()
         result = cursor.execute("SELECT * FROM PC_Devices")
         now_time = str(datetime.datetime.now())
         # print(now_time)
@@ -889,13 +913,14 @@ def update_devices(device_id_pair):
             # print(row["submitted_at"] < datetime.datetime.now())
             print("DEVICE : " + device_id)
             device = device_id_pair[device_id]
-            result = cursor.execute("INSERT INTO PC_Devices \
-                (fitbit_uid, device_id, last_sync_time, device_version, device_type, battery, battery_level, updated_at)\
-                VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')\
-                ON DUPLICATE KEY UPDATE last_sync_time='%s', battery='%s', battery_level='%s', updated_at='%s'"
-                                    % (device.uid, device_id, device.last_sync_time, device.device_version,
-                                       device.device_type, device.battery, device.battery_level, now_time,
-                                       device.last_sync_time, device.battery, device.battery_level, now_time))
+            result = cursor.execute("IF NOT EXISTS (SELECT device_id FROM PC_Devices WHERE device_id = '%s') \
+                                        INSERT INTO PC_Devices (fitbit_uid, device_id, last_sync_time, device_version, device_type, battery, battery_level, updated_at) \
+                                        VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s') \
+                                    ELSE UPDATE PC_Devices SET last_sync_time='%s', battery='%s', battery_level='%s', updated_at='%s' \
+                                        WHERE device_id = '%s'"
+                                        % (device_id, device.uid, device_id, device.last_sync_time, device.device_version,
+                                        device.device_type, device.battery, device.battery_level, now_time,
+                                        device.last_sync_time, device.battery, device.battery_level, now_time, device_id))
     except Exception as e:
         print(e)
 
@@ -916,15 +941,14 @@ def insert_weight_dict(time_pair):
         insert_set.append((time, fitbit_data.uid, fitbit_data.weight, fitbit_data.bmi, fitbit_data.fat, fitbit_data.source, str(datetime.datetime.now())))
 
     try:
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB)
+        connection = pymssql.connect(server, user, password, database)
 
         dbhandler = connection.cursor()
         flush_user = insert_set[0][1]
-        flush_date = insert_set[0][0][:10]
+        flush_date_start = insert_set[0][0][:10]
+        flush_date_end = imported_datetime.strptime(flush_date_start, '%Y-%m-%d') + datetime.timedelta(days=1)
         # flush that day's existing data
-        flush_stmt = "DELETE FROM PC_Weight WHERE fitbit_uid = '%s' AND date(timestamp) = '%s'" % (
-            flush_user, flush_date)
+        flush_stmt = "DELETE FROM PC_Weight WHERE fitbit_uid = '%s' AND timestamp >= '%s' AND timestamp < '%s'" % (flush_user, flush_date_start, flush_date_end)
         dbhandler.execute(flush_stmt)
         connection.commit()
 
@@ -933,7 +957,7 @@ def insert_weight_dict(time_pair):
         insert_cursor.executemany(stmt, insert_set)
 
     except Exception as e:
-        print "EXCEPTION IN insert_weight_dict: " + str(e)
+        print ("EXCEPTION IN insert_weight_dict: " + str(e))
 
     finally:
         connection.commit()
@@ -952,15 +976,14 @@ def insert_intraday_dict(time_pair):
     if len(insert_set) == 0:
         return
 
-    connection = db.Connection(host=HOST, port=PORT,
-                               user=USER, passwd=PASSWORD, db=DB)
+    connection = pymssql.connect(server, user, password, database)
     try:
         dbhandler = connection.cursor()
         flush_user = insert_set[0][1]
-        flush_date = insert_set[0][0][:10]
+        flush_date_start = insert_set[0][0][:10]
+        flush_date_end = imported_datetime.strptime(flush_date_start, '%Y-%m-%d') + datetime.timedelta(days=1)
         # flush that day's existing data
-        flush_stmt = "DELETE FROM PC_Step_HeartRate WHERE fitbit_uid = '%s' AND date(timestamp) = '%s'" % (
-            flush_user, flush_date)
+        flush_stmt = "DELETE FROM PC_Step_HeartRate WHERE fitbit_uid = '%s' AND timestamp >= '%s' AND timestamp < '%s'" % (flush_user, flush_date_start, flush_date_end)
         dbhandler.execute(flush_stmt)
         connection.commit()
 
@@ -970,7 +993,7 @@ def insert_intraday_dict(time_pair):
 
     except Exception as e:
         traceback.print_exc()
-        print "EXCEPTION IN insert_intraday_dict: " + str(e)
+        print ("EXCEPTION IN insert_intraday_dict: " + str(e))
 
     finally:
         connection.commit()
@@ -979,16 +1002,16 @@ def insert_intraday_dict(time_pair):
 
 def insert_daily_activity(ds):
 
-    connection = db.Connection(host=HOST, port=PORT,
-                               user=USER, passwd=PASSWORD, db=DB)
+    connection = pymssql.connect(server, user, password, database)
     try:
         print("Inserting daily set: " + str(ds))
         dbhandler = connection.cursor()
         flush_user = ds.uid
-        flush_date = ds.date
+        flush_date_start = ds.date
+        flush_date_end = imported_datetime.strptime(flush_date_start, '%Y-%m-%d') + datetime.timedelta(days=1)
         # flush that day's existing data
-        flush_stmt = "DELETE FROM PC_Daily_Activities WHERE fitbit_uid = '%s' AND date(timestamp) = '%s'" % (
-            flush_user, flush_date)
+        flush_stmt = "DELETE FROM PC_Daily_Activities WHERE fitbit_uid = '%s' AND timestamp >= '%s' AND timestamp < '%s'" % (
+            flush_user, flush_date_start, flush_date_end)
         dbhandler.execute(flush_stmt)
         connection.commit()
 
@@ -1001,7 +1024,7 @@ def insert_daily_activity(ds):
         dbhandler.execute(insert_stmt, insert_set)
 
     except Exception as e:
-        print "EXCEPTION IN insert_daily_activity: " + str(e)
+        print ("EXCEPTION IN insert_daily_activity: " + str(e))
         print(dbhandler._last_executed)
         traceback.print_exc()
 
@@ -1019,15 +1042,14 @@ def temp_insert_intraday_dict(time_pair):
         insert_set.append((time, fitbit_data.uid, fitbit_data.heart_rate, fitbit_data.step_count, fitbit_data.activity_level, str(datetime.datetime.now())))
 
     try:
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB)
+        connection = pymssql.connect(server, user, password, database)
 
         dbhandler = connection.cursor()
         stmt = "INSERT INTO Temp_Step_HeartRate (timestamp, fitbit_uid, heart_rate, step_count, activity_level, added_on) VALUES (%s, %s, %s, %s, %s, %s)"
         dbhandler.executemany(stmt, insert_set)
 
     except Exception as e:
-        print "EXCEPTION IN temp_insert_intraday_dict: " + str(e)
+        print ("EXCEPTION IN temp_insert_intraday_dict: " + str(e))
 
     finally:
         connection.commit()
@@ -1035,8 +1057,7 @@ def temp_insert_intraday_dict(time_pair):
 
 def insert_noncompliance_ping(user_id, ping_date, sync_ping_type=0):
     try:
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB)
+        connection = pymssql.connect(server, user, password, database)
 
         dbhandler = connection.cursor()
         stmt = """INSERT INTO PC_Noncompliance_Ping (date, fitbit_uid, not_equipped_flag, not_synced_flag, added_on) VALUES (%s, %s, %s, %s, %s)"""
@@ -1044,7 +1065,7 @@ def insert_noncompliance_ping(user_id, ping_date, sync_ping_type=0):
         dbhandler.execute(stmt, (ping_date, user_id, 1, sync_ping_type, str(datetime.datetime.now())))
 
     except Exception as e:
-        print "EXCEPTION IN insert_noncompliance_ping: " + str(e)
+        print ("EXCEPTION IN insert_noncompliance_ping: " + str(e))
 
     finally:
         connection.commit()
@@ -1053,18 +1074,17 @@ def insert_noncompliance_ping(user_id, ping_date, sync_ping_type=0):
 
 def connect_db():
     try:
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB)
+        connection = pymssql.connect(server, user, password, database)
 
         dbhandler = connection.cursor()
         dbhandler.execute("SELECT * from FitbitArchiveHeartRate")
         dbhandler.execute("")
         result = dbhandler.fetchall()
         for item in result:
-            print item
+            print (item)
 
     except Exception as e:
-        print e
+        print (e)
 
     finally:
         connection.commit()
@@ -1073,19 +1093,17 @@ def connect_db():
 
 def get_query_start_date(uid):
     def get_db_last_hr_record():
-        connection = db.Connection(host=HOST, port=PORT,
-                                   user=USER, passwd=PASSWORD, db=DB,
-                                   cursorclass=cursors.SSCursor)
+        connection = pymssql.connect(server, user, password, database)
         try:
-            dbhandler = connection.cursor(cursors.DictCursor)
-            stmt = "SELECT * FROM PC_Step_HeartRate WHERE fitbit_uid = '%s' ORDER BY timestamp DESC LIMIT 1" % uid
+            dbhandler = connection.cursor()
+            stmt = "SELECT TOP 1 * FROM PC_Step_HeartRate WHERE fitbit_uid = '%s' ORDER BY timestamp DESC" % uid
             dbhandler.execute(stmt)
             for row in dbhandler:
                 return row["timestamp"]
             return None
         except Exception as e:
             traceback.print_exc()
-            print "EXCEPTION get_db_last_hr_record: " + str(e)
+            print ("EXCEPTION get_db_last_hr_record: " + str(e))
         finally:
             connection.close()
     result = get_db_last_hr_record()
@@ -1107,3 +1125,5 @@ token = multi_login_routine()
 # print (datetime.date.today() - get_query_start_date("5T82TY")).days
 # print result
 print("===============================================================")
+
+
