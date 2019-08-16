@@ -1,17 +1,32 @@
-# Project Title
+# Fitbit VM Server
 
-One Paragraph of project description goes here
+Data puller: from fitbit API and Django web server to ICTR database.
 
-## Getting Started
+## Usage
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+### For First Time User
 
-### Prerequisites
-
-What things you need to install the software and how to install them
+Run following command to setup environment:
 
 ```
-Give examples
+git clone [.git]
+source venv/bin/activate
+cd python-fitbit
+python gather_keys_oauth2.py
+pip install [needed modules]
+```
+In the following browser popup, login with fitbit credentials and save the value of 'code' as CODE, which will be used below.
+CTRL-C to close auth server
+```
+pip install -r requirements2.txt
+```
+Modify the code [dbtester.py](python-fitbit/dbtester.py)
+```
+python dbtester.py [CODE]
+```
+Now the token is saved on tokens.json, save {user_id} in your head.
+```
+python dbtester.py
 ```
 
 ### Installing
