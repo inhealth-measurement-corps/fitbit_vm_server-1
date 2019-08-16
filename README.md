@@ -14,7 +14,7 @@ Environment:
 * [MSSQL ODBC Driver 13](https://www.microsoft.com/en-us/download/details.aspx?id=53339)
 * Other python libraries: pyodbc, pymssql, cherrypy, fitbit, pytz, etc.
 
-Then run following commands:
+Run following commands:
 
 ```
 git clone [.git]
@@ -55,10 +55,10 @@ Autorun every active user in [tokens.json](python-fitbit/tokens.json):
 python dbtester.py
 ```
 
-Register new user or update existing user's token:
+Register new user or update existing user's token: (get code by running gather_keys_oauth2.py)
 
 ```
-python dbtester.py [code] # get [code] by running gather_keys_oauth2.py
+python dbtester.py [code]
 ```
 
 Update a certain user's date in a given period:
@@ -80,46 +80,37 @@ Update date from a custom date:
 pyhton survey_archiver.py [date]
 ```
 
-### And coding style tests
+## Developer Guide
 
-Explain what these tests test and why
+For modify and test:
+
+### For dbtester
+
+Modify. Save. Run.
+
+### For surver archiver
+
+In case you need to modify the Django web server.
+
+Clone the web server [here](https://github.com/fath0218/Fitbit_Webserver_Django).
+
+Get into the directory and log into heroku with this credential:
+
+*ID: anthonysunghoonkim@gmail.com
+*PW: Fitbit123
 
 ```
-Give an example
+cd Fitbit_Webserver_Django
+heroku login
 ```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
-
-## Authors
-
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
-
-
+Link the heroku app with this git directory:
+```
+heroku git:remote -a jhprohealth
+```
+After modification:
+```
+git add .
+git commit -m ""
+git push heroku master
+git push
+```
