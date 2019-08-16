@@ -16,7 +16,8 @@ python gather_keys_oauth2.py
 pip install [needed modules]
 ```
 In the following browser popup, login with fitbit credentials and save the value of 'code' as CODE, which will be used below.
-CTRL-C to close auth server
+
+CTRL-C to close auth server.
 ```
 pip install -r requirements2.txt
 ```
