@@ -93,8 +93,8 @@ TokenURL = "https://api.fitbit.com/oauth2/token"
 # ICTR database info
 server = u'jhbcru-vsql2\jhbcru_vsql2'
 database = u'mmcfitbit'
-user = u'WIN\gzhanyu1'
-password = u'Gzy960218$'
+user = u'WIN\USERNAME' # YOUR USERNAME
+password = u'PASSWORD' # YOUR PASSWORD
 
 now = str(datetime.datetime.now())
 file_name = "/Users/anthony/Desktop/python_api_puller/python-fitbit/token.json"
@@ -467,7 +467,7 @@ def multi_login_routine():
             refresh_multi_user_token(token_dict=token_dict, query_uid=sys.argv[2], q_start_date=sys.argv[3], q_end_date=sys.argv[4])
 
     else:
-        print("Needs one or no argument")
+        print("Invalid input. Usage:\nRun python dbtester.py to refresh all users;\n Run python dbtester.py [code] to register a new user or update access token;\n Run python dbtester.py get [fitbit_uid] [date] [date] to pull a certain user's data during the given dates.")
         sys.exit()
     # token_dict = token_refresh(token_dict)
     return token_dict
