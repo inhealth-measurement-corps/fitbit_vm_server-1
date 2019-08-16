@@ -4,9 +4,17 @@ Data puller: from fitbit API and Django web server to ICTR database.
 
 ## Usage
 
-### For First Time User
+### For first time user
 
-Run following command to setup environment:
+Environment:
+
+* Python 3
+* JHU WIN domain computer
+* Sequel Server Management Studio (SSMS)
+* [MSSQL ODBC Driver 13](https://www.microsoft.com/en-us/download/details.aspx?id=53339)
+* Other python libraries: pyodbc, pymssql, cherrypy, fitbit, pytz, etc.
+
+Then run following commands:
 
 ```
 git clone [.git]
@@ -21,6 +29,11 @@ CTRL-C to close auth server.
 ```
 pip install -r requirements2.txt
 ```
+Run [starter.py](python-fitbit/starter.py) to register ICTR server.
+```
+python starter.py
+```
+
 Modify the code [dbtester.py](python-fitbit/dbtester.py) and [survey_archiver.py](python-fitbit/survey_archiver.py) with your own credentials to ICTR server.
 ```
 python dbtester.py [CODE]
@@ -34,34 +47,37 @@ Now the user with active token in [tokens.json](python-fitbit/tokens.json) have 
 
 Check the ICTR database for changes.
 
-### Installing
+### Prostate cancer data puller
 
-A step by step series of examples that tell you how to get a development env running
-
-Say what the step will be
+Autorun every active user in [tokens.json](python-fitbit/tokens.json):
 
 ```
-Give the example
+python dbtester.py
 ```
 
-And repeat
+Register new user or update existing user's token:
 
 ```
-until finished
+python dbtester.py [code] # get [code] by running gather_keys_oauth2.py
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
+Update a certain user's date in a given period:
+```
+python dbtester.py get [fitbit_uid] [start date, like 2019-08-01] [end date, like 2019-08-05]
+```
 
-## Running the tests
+### Check-in and survey data puller
 
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
+Update yesterday's data:
 
 ```
-Give an example
+python survey_archiver.py
+```
+
+Update date from a custom date:
+
+```
+pyhton survey_archiver.py [date]
 ```
 
 ### And coding style tests
