@@ -376,8 +376,8 @@ def insert_user_info(user_json):
     try:
         server = u'jhbcru-vsql2\jhbcru_vsql2'
         database = u'mmcfitbit'
-        user = u'WIN\gzhanyu1'
-        password = u'Gzy960218$'
+        user = u'WIN\YOUR USERNAME HERE'
+        password = u'YOUR PASSWORD HERE'
         connection = pymssql.connect(server, user, password, database)
 
         user = user_json["user"]
