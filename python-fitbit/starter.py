@@ -14,8 +14,8 @@ if testflag:
 else:
 	server = r"jhbcru-vsql2\jhbcru_vsql2"
 	database = r'mmcfitbit'
-	username = r"WIN\YOUR USERNAME HERE"
-	password = r'YOUR PASSWORD HERE'
+	username = r"WIN\zxu67"
+	password = r'!+Xz1991'
 
 print(server)
 print(username)
